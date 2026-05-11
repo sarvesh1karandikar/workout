@@ -3,25 +3,31 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="theme-color" content="#050505" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Workout" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
+  <link rel="icon" href="./icon-192.png" />
   <title>Workout</title>
   <style>
     :root {
-      --bg: #0a0a0a;
+      --bg: #050505;
+      --bg-raised: #0d0d0d;
       --panel: #141414;
       --panel-hi: #1c1c1c;
-      --border: #262626;
+      --border: #222;
+      --border-hi: #2e2e2e;
       --text: #f5f5f5;
       --muted: #8a8a8a;
       --accent: #10b981;
-      --accent-dim: #065f46;
       --danger: #ef4444;
-      --radius: 14px;
+      --radius: 16px;
+      --body-base: #181818;
+      --body-stroke: #2a2a2a;
+      --muscle-dim: #242424;
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -35,177 +41,559 @@
       font-size: 16px;
       line-height: 1.4;
       overscroll-behavior-y: contain;
+      -webkit-font-smoothing: antialiased;
     }
-
     body {
       min-height: 100dvh;
       min-height: 100vh;
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      position: relative;
+      overflow-x: hidden;
     }
+
+    .ambient {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background: radial-gradient(ellipse 120% 60% at 50% -10%,
+        color-mix(in oklab, var(--accent) 25%, transparent) 0%, transparent 60%);
+      transition: background 300ms ease, opacity 300ms ease;
+    }
+    .ambient.dim { opacity: 0.45; }
 
     .app {
+      position: relative;
+      z-index: 1;
       max-width: 640px;
       margin: 0 auto;
-      padding: 16px 16px 96px;
+      padding: 16px 16px 120px;
     }
-
     .hidden { display: none !important; }
 
     /* ---------- Home ---------- */
-
     .app-header {
       display: flex;
       align-items: baseline;
       justify-content: space-between;
-      margin: 12px 4px 20px;
+      margin: 16px 4px 24px;
     }
     .app-title {
       font-size: 13px;
-      letter-spacing: 0.2em;
+      letter-spacing: 0.25em;
       color: var(--muted);
       text-transform: uppercase;
-      font-weight: 600;
+      font-weight: 700;
     }
-    .last-session {
-      font-size: 12px;
-      color: var(--muted);
+    .last-session { font-size: 12px; color: var(--muted); }
+    .last-session .dot {
+      display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor; margin-right: 6px; transform: translateY(-1px);
     }
 
-    .tiles {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+    .tiles { display: flex; flex-direction: column; gap: 14px; }
     .tile {
-      display: block;
+      --tile-accent: var(--accent);
+      position: relative;
+      display: flex; align-items: center; gap: 18px;
       width: 100%;
-      background: var(--panel);
-      border: 1px solid var(--border);
+      background:
+        linear-gradient(135deg,
+          color-mix(in oklab, var(--tile-accent) 16%, var(--panel)) 0%,
+          var(--panel) 60%);
+      border: 1px solid color-mix(in oklab, var(--tile-accent) 30%, var(--border));
       border-radius: var(--radius);
-      padding: 28px 20px;
+      padding: 22px 20px;
       color: var(--text);
       text-align: left;
       font: inherit;
       cursor: pointer;
-      transition: background 120ms ease, transform 60ms ease;
+      overflow: hidden;
+      transition: transform 80ms ease, border-color 150ms ease;
     }
-    .tile:active { background: var(--panel-hi); transform: scale(0.995); }
-    .tile-name {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
+    .tile::before {
+      content: "";
+      position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--tile-accent);
+      box-shadow: 0 0 24px 2px color-mix(in oklab, var(--tile-accent) 60%, transparent);
     }
+    .tile::after {
+      content: ""; position: absolute; right: -40px; top: -40px;
+      width: 140px; height: 140px; border-radius: 50%;
+      background: radial-gradient(circle,
+        color-mix(in oklab, var(--tile-accent) 38%, transparent) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .tile:active { transform: scale(0.992); }
+    .tile-silhouette { flex-shrink: 0; width: 62px; height: 88px; color: var(--tile-accent); }
+    .tile-copy { flex: 1; min-width: 0; }
+    .tile-name { font-size: 26px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
     .tile-meta {
-      margin-top: 6px;
-      font-size: 13px;
-      color: var(--muted);
+      margin-top: 4px; font-size: 12px; color: var(--muted);
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .tile-arrow {
+      flex-shrink: 0; font-size: 22px;
+      color: color-mix(in oklab, var(--tile-accent) 70%, var(--muted));
+      opacity: 0.8;
     }
 
-    /* ---------- Workout detail ---------- */
-
-    .detail-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin: 4px 0 20px;
-    }
+    /* ---------- Detail ---------- */
+    .detail-header { display: flex; align-items: center; gap: 12px; margin: 4px 0 8px; }
     .back-btn {
-      background: none;
+      background: var(--panel);
       border: 1px solid var(--border);
       color: var(--text);
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      font-size: 20px;
-      cursor: pointer;
-      display: grid;
-      place-items: center;
+      width: 44px; height: 44px; border-radius: 12px;
+      font-size: 22px; cursor: pointer;
+      display: grid; place-items: center;
+      transition: background 120ms ease;
     }
     .back-btn:active { background: var(--panel-hi); }
     .detail-title {
-      font-size: 22px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.02em;
-      flex: 1;
+      font-size: 24px; font-weight: 900; text-transform: uppercase;
+      letter-spacing: 0.06em; flex: 1;
     }
-    .progress {
-      font-size: 13px;
-      color: var(--muted);
+
+    .progress-ring { position: relative; width: 52px; height: 52px; flex-shrink: 0; }
+    .progress-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .progress-ring .track { stroke: var(--border); }
+    .progress-ring .fill {
+      stroke: var(--accent);
+      transition: stroke-dashoffset 280ms cubic-bezier(.4,0,.2,1);
+      filter: drop-shadow(0 0 4px color-mix(in oklab, var(--accent) 50%, transparent));
+    }
+    .progress-ring .label {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      font-size: 11px; font-weight: 700; color: var(--text);
       font-variant-numeric: tabular-nums;
     }
-    .progress.complete { color: var(--accent); }
+    .progress-ring.complete .label { color: var(--accent); }
 
+    /* Hero */
+    .detail-hero {
+      margin: 20px 0 4px;
+      padding: 22px 20px;
+      background:
+        linear-gradient(135deg,
+          color-mix(in oklab, var(--accent) 18%, var(--panel)) 0%,
+          var(--panel) 70%);
+      border: 1px solid color-mix(in oklab, var(--accent) 30%, var(--border));
+      border-radius: var(--radius);
+      display: flex; align-items: center; gap: 16px;
+      overflow: hidden; position: relative;
+    }
+    .detail-hero::after {
+      content: ""; position: absolute; right: -60px; top: -60px;
+      width: 220px; height: 220px; border-radius: 50%;
+      background: radial-gradient(circle,
+        color-mix(in oklab, var(--accent) 45%, transparent) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-silhouette {
+      width: 120px; height: 170px; flex-shrink: 0;
+      color: var(--accent); position: relative; z-index: 1;
+    }
+    .hero-copy { flex: 1; position: relative; z-index: 1; min-width: 0; }
+    .hero-label {
+      font-size: 11px; letter-spacing: 0.2em; color: var(--muted);
+      text-transform: uppercase; font-weight: 700;
+    }
+    .hero-muscles { margin-top: 4px; font-size: 16px; font-weight: 700; line-height: 1.35; }
+
+    /* Exercise list */
+    .exercises { margin-top: 20px; }
     .exercise {
-      padding: 18px 4px;
+      padding: 14px 0 16px;
       border-top: 1px solid var(--border);
-    }
-    .exercise:first-of-type { border-top: none; padding-top: 8px; }
-    .ex-name {
-      font-size: 17px;
-      font-weight: 700;
-      margin: 0 0 2px;
-    }
-    .ex-prescription {
-      font-size: 13px;
-      color: var(--muted);
-      margin: 0 0 14px;
-    }
-    .sets {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .set {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      border: 2px solid var(--border);
-      background: var(--panel);
-      color: var(--muted);
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
       display: grid;
-      place-items: center;
-      transition: background 100ms ease, border-color 100ms ease, color 100ms ease, transform 60ms ease;
+      grid-template-columns: 56px 1fr;
+      grid-template-rows: auto auto;
+      grid-template-areas:
+        "icon head"
+        "sets sets";
+      column-gap: 14px; row-gap: 12px;
     }
-    .set:active { transform: scale(0.92); }
+    .exercise:first-of-type { border-top: none; padding-top: 6px; }
+    .ex-icon {
+      grid-area: icon;
+      width: 56px; height: 72px;
+      color: var(--accent);
+      display: grid; place-items: center;
+    }
+    .ex-icon svg { width: 100%; height: 100%; }
+    .ex-head { grid-area: head; min-width: 0; align-self: center; }
+    .ex-name { font-size: 16px; font-weight: 700; margin: 2px 0 4px; letter-spacing: 0.01em; }
+    .ex-prescription {
+      font-size: 12px; color: var(--muted);
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .sets { grid-area: sets; display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .set {
+      position: relative;
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      border: 1.5px solid var(--border-hi);
+      background: var(--bg-raised);
+      color: var(--muted);
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+      display: grid; place-items: center;
+      transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 80ms ease;
+      overflow: hidden;
+    }
+    .set span.num { position: relative; z-index: 1; }
+    .set:active { transform: scale(0.9); }
     .set.done {
       background: var(--accent);
       border-color: var(--accent);
       color: #04201a;
+      box-shadow: 0 0 16px -2px color-mix(in oklab, var(--accent) 50%, transparent);
+    }
+    .set .pulse {
+      position: absolute; inset: 0; border-radius: inherit;
+      pointer-events: none; background: currentColor; opacity: 0;
+    }
+    .set.pulse-go .pulse { animation: pulse 420ms ease-out; }
+    @keyframes pulse {
+      0%   { opacity: 0.4; transform: scale(0.6); }
+      100% { opacity: 0;   transform: scale(1.7); }
+    }
+
+    .detail-hero.complete { animation: heroGlow 1200ms ease-out; }
+    @keyframes heroGlow {
+      0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 60%, transparent); }
+      50%  { box-shadow: 0 0 40px 8px color-mix(in oklab, var(--accent) 50%, transparent); }
+      100% { box-shadow: 0 0 0 0 transparent; }
     }
 
     .reset-bar {
       position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-      background: linear-gradient(to top, rgba(10,10,10,0.95) 70%, rgba(10,10,10,0));
-      display: flex;
-      justify-content: center;
-      pointer-events: none;
+      left: 0; right: 0; bottom: 0;
+      padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+      background: linear-gradient(to top, rgba(5,5,5,0.97) 65%, rgba(5,5,5,0));
+      display: flex; justify-content: center;
+      pointer-events: none; z-index: 5;
     }
     .reset-btn {
       pointer-events: auto;
-      background: var(--panel);
-      color: var(--muted);
+      background: var(--panel); color: var(--muted);
       border: 1px solid var(--border);
       border-radius: 999px;
-      padding: 10px 22px;
-      font: inherit;
-      font-size: 13px;
+      padding: 11px 24px;
+      font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0.05em;
       cursor: pointer;
+      transition: background 120ms ease, color 120ms ease;
     }
     .reset-btn:active { background: var(--panel-hi); color: var(--text); }
+
+    /* ---------- Silhouette styling ---------- */
+    .silhouette .body-base {
+      fill: var(--body-base);
+      stroke: var(--body-stroke);
+      stroke-width: 1.2;
+    }
+    .silhouette [data-muscle] {
+      fill: var(--muscle-dim);
+      transition: fill 220ms ease;
+    }
+    .silhouette [data-muscle].active {
+      fill: currentColor;
+    }
   </style>
 </head>
 <body>
+  <!-- =====================================================================
+       Silhouette sprite: one <symbol> per body view (front, back).
+       Every muscle region has a data-muscle="id". JS toggles `.active` to
+       highlight. Same symbol is reused at every size (tile / hero / ex-icon).
+       ===================================================================== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+
+      <!-- ===== FRONT view (200 x 300 viewBox) ===== -->
+      <symbol id="body-front" viewBox="0 0 200 300" overflow="visible">
+        <!-- Body base outline: head + torso + arms + legs, drawn as one smooth path -->
+        <path class="body-base" d="
+          M 100 10
+          C 115 10 125 22 125 36
+          C 125 48 118 58 110 62
+          L 112 72
+          C 130 74 148 78 156 92
+          L 162 130
+          C 166 148 158 158 150 156
+          L 148 150
+          C 152 170 158 196 160 220
+          L 162 260
+          C 162 270 158 276 150 276
+          L 144 276
+          C 134 276 128 268 126 256
+          L 120 210
+          L 112 180
+          L 108 180
+          L 108 288
+          C 108 294 104 296 100 296
+          C 96 296 92 294 92 288
+          L 92 180
+          L 88 180
+          L 80 210
+          L 74 256
+          C 72 268 66 276 56 276
+          L 50 276
+          C 42 276 38 270 38 260
+          L 40 220
+          C 42 196 48 170 52 150
+          L 50 156
+          C 42 158 34 148 38 130
+          L 44 92
+          C 52 78 70 74 88 72
+          L 90 62
+          C 82 58 75 48 75 36
+          C 75 22 85 10 100 10
+          Z
+        "/>
+
+        <!-- Chest: two pec curves -->
+        <path data-muscle="chest" d="
+          M 98 72
+          C 92 72 86 76 82 82
+          C 76 88 74 100 78 108
+          C 86 116 94 114 98 110
+          L 98 72 Z"/>
+        <path data-muscle="chest" d="
+          M 102 72
+          C 108 72 114 76 118 82
+          C 124 88 126 100 122 108
+          C 114 116 106 114 102 110
+          L 102 72 Z"/>
+
+        <!-- Front delts: round cap at each shoulder -->
+        <path data-muscle="delts-front" d="
+          M 84 74
+          C 76 74 68 78 64 86
+          C 60 94 62 100 68 102
+          C 74 102 80 96 84 88 Z"/>
+        <path data-muscle="delts-front" d="
+          M 116 74
+          C 124 74 132 78 136 86
+          C 140 94 138 100 132 102
+          C 126 102 120 96 116 88 Z"/>
+
+        <!-- Side delts: lateral slice -->
+        <path data-muscle="delts-side" d="
+          M 64 86
+          C 56 92 54 102 58 110
+          C 62 114 66 110 68 104
+          C 68 96 66 90 64 86 Z"/>
+        <path data-muscle="delts-side" d="
+          M 136 86
+          C 144 92 146 102 142 110
+          C 138 114 134 110 132 104
+          C 132 96 134 90 136 86 Z"/>
+
+        <!-- Biceps -->
+        <path data-muscle="biceps" d="
+          M 56 108
+          C 52 112 48 124 50 136
+          C 54 140 62 138 64 132
+          C 64 124 62 116 60 110 Z"/>
+        <path data-muscle="biceps" d="
+          M 144 108
+          C 148 112 152 124 150 136
+          C 146 140 138 138 136 132
+          C 136 124 138 116 140 110 Z"/>
+
+        <!-- Forearms -->
+        <path data-muscle="forearms" d="
+          M 50 140
+          C 48 148 46 160 44 170
+          C 42 176 48 178 52 174
+          C 54 164 56 152 56 144 Z"/>
+        <path data-muscle="forearms" d="
+          M 150 140
+          C 152 148 154 160 156 170
+          C 158 176 152 178 148 174
+          C 146 164 144 152 144 144 Z"/>
+
+        <!-- Abs: 6-pack grid as three stacked pairs -->
+        <path data-muscle="abs" d="
+          M 90 116 L 100 116 L 100 130 L 90 130 Z
+          M 100 116 L 110 116 L 110 130 L 100 130 Z
+          M 90 132 L 100 132 L 100 146 L 90 146 Z
+          M 100 132 L 110 132 L 110 146 L 100 146 Z
+          M 90 148 L 100 148 L 100 164 L 90 164 Z
+          M 100 148 L 110 148 L 110 164 L 100 164 Z"/>
+
+        <!-- Obliques: curved flanks -->
+        <path data-muscle="obliques" d="
+          M 80 118
+          C 76 134 78 150 84 164
+          L 88 164 L 88 118 Z"/>
+        <path data-muscle="obliques" d="
+          M 120 118
+          C 124 134 122 150 116 164
+          L 112 164 L 112 118 Z"/>
+
+        <!-- Quads: big outer teardrop per leg -->
+        <path data-muscle="quads" d="
+          M 82 172
+          C 78 188 78 210 82 230
+          C 86 238 94 236 96 228
+          C 98 210 98 190 96 172 Z"/>
+        <path data-muscle="quads" d="
+          M 118 172
+          C 122 188 122 210 118 230
+          C 114 238 106 236 104 228
+          C 102 210 102 190 104 172 Z"/>
+
+        <!-- Calves (front view shows slight bulge lower leg) -->
+        <path data-muscle="calves" d="
+          M 82 238
+          C 80 250 82 262 86 272
+          C 90 270 92 258 90 244 Z"/>
+        <path data-muscle="calves" d="
+          M 118 238
+          C 120 250 118 262 114 272
+          C 110 270 108 258 110 244 Z"/>
+      </symbol>
+
+      <!-- ===== BACK view (200 x 300 viewBox) ===== -->
+      <symbol id="body-back" viewBox="0 0 200 300" overflow="visible">
+        <path class="body-base" d="
+          M 100 10
+          C 115 10 125 22 125 36
+          C 125 48 118 58 110 62
+          L 112 72
+          C 130 74 148 78 156 92
+          L 162 130
+          C 166 148 158 158 150 156
+          L 148 150
+          C 152 170 158 196 160 220
+          L 162 260
+          C 162 270 158 276 150 276
+          L 144 276
+          C 134 276 128 268 126 256
+          L 120 210
+          L 112 180
+          L 108 180
+          L 108 288
+          C 108 294 104 296 100 296
+          C 96 296 92 294 92 288
+          L 92 180
+          L 88 180
+          L 80 210
+          L 74 256
+          C 72 268 66 276 56 276
+          L 50 276
+          C 42 276 38 270 38 260
+          L 40 220
+          C 42 196 48 170 52 150
+          L 50 156
+          C 42 158 34 148 38 130
+          L 44 92
+          C 52 78 70 74 88 72
+          L 90 62
+          C 82 58 75 48 75 36
+          C 75 22 85 10 100 10
+          Z
+        "/>
+
+        <!-- Upper back / traps + rhomboids -->
+        <path data-muscle="back-upper" d="
+          M 82 72
+          C 90 70 110 70 118 72
+          L 122 86
+          C 116 94 108 96 100 96
+          C 92 96 84 94 78 86 Z"/>
+
+        <!-- Rear delts -->
+        <path data-muscle="delts-rear" d="
+          M 84 74
+          C 76 74 68 78 64 86
+          C 60 94 62 100 68 102
+          C 74 102 80 96 84 88 Z"/>
+        <path data-muscle="delts-rear" d="
+          M 116 74
+          C 124 74 132 78 136 86
+          C 140 94 138 100 132 102
+          C 126 102 120 96 116 88 Z"/>
+
+        <!-- Lats: broad V-shape -->
+        <path data-muscle="back-lats" d="
+          M 78 96
+          C 74 108 72 124 78 140
+          C 84 144 94 144 98 140
+          L 98 100
+          C 90 100 84 98 78 96 Z"/>
+        <path data-muscle="back-lats" d="
+          M 122 96
+          C 126 108 128 124 122 140
+          C 116 144 106 144 102 140
+          L 102 100
+          C 110 100 116 98 122 96 Z"/>
+
+        <!-- Triceps -->
+        <path data-muscle="triceps" d="
+          M 56 108
+          C 52 112 48 124 50 136
+          C 54 140 62 138 64 132
+          C 64 124 62 116 60 110 Z"/>
+        <path data-muscle="triceps" d="
+          M 144 108
+          C 148 112 152 124 150 136
+          C 146 140 138 138 136 132
+          C 136 124 138 116 140 110 Z"/>
+
+        <!-- Lower back -->
+        <path data-muscle="back-lower" d="
+          M 86 142
+          C 82 156 82 166 86 168
+          L 114 168
+          C 118 166 118 156 114 142 Z"/>
+
+        <!-- Glutes: two round mounds -->
+        <path data-muscle="glutes" d="
+          M 78 170
+          C 74 180 74 196 82 204
+          C 92 208 98 204 100 194
+          L 100 170 Z"/>
+        <path data-muscle="glutes" d="
+          M 122 170
+          C 126 180 126 196 118 204
+          C 108 208 102 204 100 194
+          L 100 170 Z"/>
+
+        <!-- Hamstrings -->
+        <path data-muscle="hams" d="
+          M 82 208
+          C 78 224 78 238 82 248
+          C 86 252 94 250 96 244
+          C 98 230 98 216 96 208 Z"/>
+        <path data-muscle="hams" d="
+          M 118 208
+          C 122 224 122 238 118 248
+          C 114 252 106 250 104 244
+          C 102 230 102 216 104 208 Z"/>
+
+        <!-- Calves: two-head bulge -->
+        <path data-muscle="calves" d="
+          M 82 252
+          C 78 260 78 270 84 276
+          C 90 274 92 264 90 254 Z"/>
+        <path data-muscle="calves" d="
+          M 118 252
+          C 122 260 122 270 116 276
+          C 110 274 108 264 110 254 Z"/>
+      </symbol>
+
+    </defs>
+  </svg>
+
+  <div class="ambient dim" id="ambient"></div>
+
   <div class="app">
-    <!-- Home screen -->
+    <!-- Home -->
     <section id="home" class="screen">
       <header class="app-header">
         <div class="app-title">Workout</div>
@@ -214,14 +602,33 @@
       <div class="tiles" id="tiles"></div>
     </section>
 
-    <!-- Detail screen -->
+    <!-- Detail -->
     <section id="detail" class="screen hidden">
       <header class="detail-header">
         <button class="back-btn" id="back-btn" aria-label="Back">‹</button>
         <div class="detail-title" id="detail-title"></div>
-        <div class="progress" id="progress"></div>
+        <div class="progress-ring" id="progress-ring">
+          <svg viewBox="0 0 52 52">
+            <circle class="track" cx="26" cy="26" r="22" fill="none" stroke-width="4"/>
+            <circle class="fill"  cx="26" cy="26" r="22" fill="none" stroke-width="4"
+                    stroke-linecap="round" stroke-dasharray="138.23" stroke-dashoffset="138.23"/>
+          </svg>
+          <div class="label" id="progress-label">0/0</div>
+        </div>
       </header>
-      <div id="exercises"></div>
+
+      <div class="detail-hero" id="detail-hero">
+        <svg class="hero-silhouette silhouette" id="hero-silhouette" viewBox="0 0 200 300">
+          <use href="#body-front"/>
+        </svg>
+        <div class="hero-copy">
+          <div class="hero-label">Target muscles</div>
+          <div class="hero-muscles" id="hero-muscles"></div>
+        </div>
+      </div>
+
+      <div class="exercises" id="exercises"></div>
+
       <div class="reset-bar">
         <button class="reset-btn" id="reset-btn">Reset today</button>
       </div>
@@ -231,10 +638,8 @@
   <script type="module">
     import { WORKOUTS, WORKOUT_ORDER } from "./workouts.js";
 
-    // ---------- State & persistence ----------
-
+    // ---------- Persistence ----------
     const PREFIX = "workout:";
-
     const todayKey = () => {
       const d = new Date();
       const y = d.getFullYear();
@@ -242,58 +647,36 @@
       const day = String(d.getDate()).padStart(2, "0");
       return `${PREFIX}${y}-${m}-${day}`;
     };
-
     const emptyState = (id) =>
       WORKOUTS[id].exercises.map((ex) => Array(ex.sets).fill(false));
 
-    // Prune keys from earlier days, return { today: {...}, lastDay: 'YYYY-MM-DD'|null, lastId: string|null }
     const loadAndPrune = () => {
       const today = todayKey();
-      let lastDay = null;
-      let lastId = null;
-      let lastTime = 0;
-
+      let lastDay = null, lastId = null, lastTime = 0;
       for (let i = localStorage.length - 1; i >= 0; i--) {
         const k = localStorage.key(i);
-        if (!k || !k.startsWith(PREFIX)) continue;
-        if (k === today) continue;
-
-        // read before deleting, find most recent with any checks
+        if (!k || !k.startsWith(PREFIX) || k === today) continue;
         try {
           const v = JSON.parse(localStorage.getItem(k) || "{}");
           for (const id of WORKOUT_ORDER) {
             if (v[id] && v[id].some((arr) => arr.some(Boolean))) {
-              const dayStr = k.slice(PREFIX.length);
-              const t = new Date(dayStr + "T00:00:00").getTime();
-              if (t > lastTime) {
-                lastTime = t;
-                lastDay = dayStr;
-                lastId = id;
-              }
+              const t = new Date(k.slice(PREFIX.length) + "T00:00:00").getTime();
+              if (t > lastTime) { lastTime = t; lastDay = k.slice(PREFIX.length); lastId = id; }
             }
           }
         } catch {}
         localStorage.removeItem(k);
       }
-
       let todayState = {};
-      try {
-        todayState = JSON.parse(localStorage.getItem(today) || "{}");
-      } catch {
-        todayState = {};
-      }
+      try { todayState = JSON.parse(localStorage.getItem(today) || "{}"); } catch {}
       return { todayState, lastDay, lastId };
     };
-
-    const saveToday = (state) => {
-      localStorage.setItem(todayKey(), JSON.stringify(state));
-    };
+    const saveToday = (state) => localStorage.setItem(todayKey(), JSON.stringify(state));
 
     let { todayState, lastDay, lastId } = loadAndPrune();
 
     const getWorkoutState = (id) => {
       if (!todayState[id]) todayState[id] = emptyState(id);
-      // if data shape doesn't match (workout was edited), reset it
       const expected = WORKOUTS[id].exercises;
       if (
         todayState[id].length !== expected.length ||
@@ -304,35 +687,108 @@
       return todayState[id];
     };
 
-    // ---------- Rendering ----------
+    // ---------- Labels ----------
+    const MUSCLE_LABELS = {
+      chest: "Chest",
+      "delts-front": "Front delts",
+      "delts-side": "Side delts",
+      "delts-rear": "Rear delts",
+      triceps: "Triceps",
+      biceps: "Biceps",
+      forearms: "Forearms",
+      "back-upper": "Upper back",
+      "back-lats": "Lats",
+      "back-lower": "Lower back",
+      hams: "Hamstrings",
+      quads: "Quads",
+      glutes: "Glutes",
+      calves: "Calves",
+      abs: "Abs",
+      obliques: "Obliques",
+    };
 
-    const $ = (sel) => document.querySelector(sel);
+    // ---------- DOM ----------
+    const $ = (s) => document.querySelector(s);
     const home = $("#home");
     const detail = $("#detail");
     const tilesEl = $("#tiles");
     const detailTitle = $("#detail-title");
-    const progressEl = $("#progress");
     const exercisesEl = $("#exercises");
     const backBtn = $("#back-btn");
     const resetBtn = $("#reset-btn");
     const lastSessionEl = $("#last-session");
+    const ambient = $("#ambient");
+    const hero = $("#detail-hero");
+    const heroMuscles = $("#hero-muscles");
+    const heroSilhouette = $("#hero-silhouette");
+    const progressRing = $("#progress-ring");
+    const progressFill = progressRing.querySelector(".fill");
+    const progressLabel = $("#progress-label");
+    const RING_CIRCUMFERENCE = 2 * Math.PI * 22;
 
+    // Build a small silhouette SVG element showing a subset of muscles highlighted.
+    // view: "front" | "back". muscles: array of muscle IDs. cls: class string.
+    const buildSilhouette = (view, muscles, cls) => {
+      const sym = view === "back" ? "#body-back" : "#body-front";
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", `silhouette ${cls || ""}`);
+      svg.setAttribute("viewBox", "0 0 200 300");
+      svg.innerHTML = `<use href="${sym}"/>`;
+      // Find the resolved muscle regions via a temporary instance — easier: clone markup.
+      // Simpler approach: wrap a direct inline copy so we can tag .active classes.
+      // (use-shadow elements can't be styled by classname on inner nodes reliably across browsers).
+      // So for per-instance highlighting, we embed the body markup directly instead of <use>.
+      return svg;
+    };
+
+    // Because <use> shadow-DOM cannot have its inner nodes individually class-toggled in all browsers,
+    // we inline-clone the <symbol> body for each instance. Helper:
+    const getSymbolInner = (() => {
+      const cache = {};
+      return (id) => {
+        if (cache[id]) return cache[id];
+        const sym = document.getElementById(id);
+        cache[id] = sym ? sym.innerHTML : "";
+        return cache[id];
+      };
+    })();
+
+    const renderSilhouette = (el, view, muscles) => {
+      const id = view === "back" ? "body-back" : "body-front";
+      el.innerHTML = getSymbolInner(id);
+      // mark active
+      const set = new Set(muscles || []);
+      el.querySelectorAll("[data-muscle]").forEach((node) => {
+        if (set.has(node.getAttribute("data-muscle"))) node.classList.add("active");
+        else node.classList.remove("active");
+      });
+    };
+
+    // ---------- Home ----------
     const renderHome = () => {
       tilesEl.innerHTML = "";
       for (const id of WORKOUT_ORDER) {
         const w = WORKOUTS[id];
         const btn = document.createElement("button");
         btn.className = "tile";
+        btn.style.setProperty("--tile-accent", w.accent);
         btn.innerHTML = `
-          <div class="tile-name">${w.title}</div>
-          <div class="tile-meta">${w.exercises.length} exercises</div>
+          <svg class="tile-silhouette silhouette" viewBox="0 0 200 300" aria-hidden="true"></svg>
+          <div class="tile-copy">
+            <div class="tile-name"></div>
+            <div class="tile-meta"></div>
+          </div>
+          <div class="tile-arrow">›</div>
         `;
+        btn.querySelector(".tile-name").textContent = w.title;
+        btn.querySelector(".tile-meta").textContent = `${w.exercises.length} exercises`;
+        renderSilhouette(btn.querySelector(".tile-silhouette"), w.view, w.muscles);
         btn.addEventListener("click", () => openWorkout(id, true));
         tilesEl.appendChild(btn);
       }
 
       if (lastDay && lastId) {
-        lastSessionEl.textContent = `Last: ${WORKOUTS[lastId].title} · ${humanAgo(lastDay)}`;
+        lastSessionEl.innerHTML = `<span class="dot" style="color:${WORKOUTS[lastId].accent}"></span>Last: ${WORKOUTS[lastId].title} · ${humanAgo(lastDay)}`;
         lastSessionEl.classList.remove("hidden");
       } else {
         lastSessionEl.classList.add("hidden");
@@ -340,24 +796,32 @@
     };
 
     const humanAgo = (dayStr) => {
-      const then = new Date(dayStr + "T00:00:00");
-      const now = new Date();
-      const days = Math.floor((now - then) / 86400000);
+      const days = Math.floor((Date.now() - new Date(dayStr + "T00:00:00").getTime()) / 86400000);
       if (days <= 0) return "today";
       if (days === 1) return "yesterday";
       if (days < 7) return `${days}d ago`;
       const weeks = Math.floor(days / 7);
-      if (weeks === 1) return "1wk ago";
-      return `${weeks}wk ago`;
+      return weeks === 1 ? "1wk ago" : `${weeks}wk ago`;
     };
 
+    // ---------- Detail ----------
     let currentId = null;
+    let wasComplete = false;
 
     const openWorkout = (id, pushHistory) => {
       currentId = id;
       const w = WORKOUTS[id];
+
+      document.documentElement.style.setProperty("--accent", w.accent);
+      ambient.classList.remove("dim");
+
       detailTitle.textContent = w.title;
 
+      // Hero silhouette — workout-level target
+      renderSilhouette(heroSilhouette, w.view, w.muscles);
+      heroMuscles.textContent = w.muscles.map((m) => MUSCLE_LABELS[m] || m).join(" · ");
+
+      // Exercises
       exercisesEl.innerHTML = "";
       const state = getWorkoutState(id);
 
@@ -365,72 +829,81 @@
         const exEl = document.createElement("div");
         exEl.className = "exercise";
         exEl.innerHTML = `
-          <div class="ex-name"></div>
-          <div class="ex-prescription"></div>
+          <div class="ex-icon">
+            <svg class="silhouette" viewBox="0 0 200 300" aria-hidden="true"></svg>
+          </div>
+          <div class="ex-head">
+            <div class="ex-name"></div>
+            <div class="ex-prescription"></div>
+          </div>
           <div class="sets"></div>
         `;
         exEl.querySelector(".ex-name").textContent = ex.name;
         exEl.querySelector(".ex-prescription").textContent = `${ex.sets} × ${ex.reps}`;
-        const setsEl = exEl.querySelector(".sets");
+        renderSilhouette(exEl.querySelector(".ex-icon svg"), ex.view || w.view, ex.primary);
 
+        const setsEl = exEl.querySelector(".sets");
         for (let s = 0; s < ex.sets; s++) {
-          const setBtn = document.createElement("button");
-          setBtn.className = "set" + (state[exIdx][s] ? " done" : "");
-          setBtn.textContent = String(s + 1);
-          setBtn.setAttribute("aria-label", `Set ${s + 1}`);
-          setBtn.addEventListener("click", () => {
+          const b = document.createElement("button");
+          b.className = "set" + (state[exIdx][s] ? " done" : "");
+          b.innerHTML = `<span class="num">${s + 1}</span><span class="pulse"></span>`;
+          b.setAttribute("aria-label", `Set ${s + 1}`);
+          b.addEventListener("click", () => {
             state[exIdx][s] = !state[exIdx][s];
-            setBtn.classList.toggle("done", state[exIdx][s]);
+            b.classList.toggle("done", state[exIdx][s]);
+            b.classList.remove("pulse-go");
+            void b.offsetWidth;
+            b.classList.add("pulse-go");
             saveToday(todayState);
             updateProgress(id);
           });
-          setsEl.appendChild(setBtn);
+          setsEl.appendChild(b);
         }
-
         exercisesEl.appendChild(exEl);
       });
 
+      wasComplete = false;
       updateProgress(id);
 
       home.classList.add("hidden");
       detail.classList.remove("hidden");
       window.scrollTo(0, 0);
 
-      if (pushHistory) {
-        history.pushState({ screen: "detail", id }, "", `#${id}`);
-      }
+      if (pushHistory) history.pushState({ screen: "detail", id }, "", `#${id}`);
     };
 
     const goHome = (pushHistory) => {
       currentId = null;
       detail.classList.add("hidden");
       home.classList.remove("hidden");
-      // refresh last-session indicator in case user just checked things
+      document.documentElement.style.setProperty("--accent", "#10b981");
+      ambient.classList.add("dim");
       renderHome();
-      if (pushHistory) {
-        history.pushState({ screen: "home" }, "", "#");
-      }
+      if (pushHistory) history.pushState({ screen: "home" }, "", "#");
     };
 
     const updateProgress = (id) => {
       const state = getWorkoutState(id);
       const total = state.reduce((a, b) => a + b.length, 0);
-      const done = state.reduce((a, b) => a + b.filter(Boolean).length, 0);
-      progressEl.textContent = `${done} / ${total}`;
-      progressEl.classList.toggle("complete", done === total && total > 0);
+      const done  = state.reduce((a, b) => a + b.filter(Boolean).length, 0);
+      progressLabel.textContent = `${done}/${total}`;
+      const pct = total === 0 ? 0 : done / total;
+      progressFill.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - pct));
+      const complete = total > 0 && done === total;
+      progressRing.classList.toggle("complete", complete);
+      if (complete && !wasComplete) {
+        hero.classList.remove("complete");
+        void hero.offsetWidth;
+        hero.classList.add("complete");
+      }
+      wasComplete = complete;
     };
 
     // ---------- Wiring ----------
-
     backBtn.addEventListener("click", () => {
-      // Prefer native back so hardware/gesture back also works; fall back for first entry
-      if (history.state && history.state.screen === "detail") {
-        history.back();
-      } else {
-        goHome(true);
-      }
+      if (history.state && history.state.screen === "detail") history.back();
+      else goHome(true);
     });
-
     resetBtn.addEventListener("click", () => {
       if (!currentId) return;
       if (!confirm(`Reset all checked sets for ${WORKOUTS[currentId].title}?`)) return;
@@ -438,18 +911,13 @@
       saveToday(todayState);
       openWorkout(currentId, false);
     });
-
     window.addEventListener("popstate", (e) => {
       const st = e.state;
-      if (st && st.screen === "detail" && WORKOUTS[st.id]) {
-        openWorkout(st.id, false);
-      } else {
-        goHome(false);
-      }
+      if (st && st.screen === "detail" && WORKOUTS[st.id]) openWorkout(st.id, false);
+      else goHome(false);
     });
 
     // ---------- Boot ----------
-
     const bootId = location.hash.replace(/^#/, "");
     renderHome();
     if (WORKOUTS[bootId]) {
@@ -458,8 +926,6 @@
     } else {
       history.replaceState({ screen: "home" }, "", location.pathname);
     }
-
-    // ---------- PWA ----------
 
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
