@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Workout" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <title>Workout</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --panel: #141414;
+      --panel-hi: #1c1c1c;
+      --border: #262626;
+      --text: #f5f5f5;
+      --muted: #8a8a8a;
+      --accent: #10b981;
+      --accent-dim: #065f46;
+      --danger: #ef4444;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.4;
+      overscroll-behavior-y: contain;
+    }
+
+    body {
+      min-height: 100dvh;
+      min-height: 100vh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    .app {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 16px 16px 96px;
+    }
+
+    .hidden { display: none !important; }
+
+    /* ---------- Home ---------- */
+
+    .app-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin: 12px 4px 20px;
+    }
+    .app-title {
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .last-session {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .tiles {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .tile {
+      display: block;
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      color: var(--text);
+      text-align: left;
+      font: inherit;
+      cursor: pointer;
+      transition: background 120ms ease, transform 60ms ease;
+    }
+    .tile:active { background: var(--panel-hi); transform: scale(0.995); }
+    .tile-name {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .tile-meta {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ---------- Workout detail ---------- */
+
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 4px 0 20px;
+    }
+    .back-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      font-size: 20px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
+    .back-btn:active { background: var(--panel-hi); }
+    .detail-title {
+      font-size: 22px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      flex: 1;
+    }
+    .progress {
+      font-size: 13px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .progress.complete { color: var(--accent); }
+
+    .exercise {
+      padding: 18px 4px;
+      border-top: 1px solid var(--border);
+    }
+    .exercise:first-of-type { border-top: none; padding-top: 8px; }
+    .ex-name {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0 0 2px;
+    }
+    .ex-prescription {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 14px;
+    }
+    .sets {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .set {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 100ms ease, border-color 100ms ease, color 100ms ease, transform 60ms ease;
+    }
+    .set:active { transform: scale(0.92); }
+    .set.done {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #04201a;
+    }
+
+    .reset-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: linear-gradient(to top, rgba(10,10,10,0.95) 70%, rgba(10,10,10,0));
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .reset-btn {
+      pointer-events: auto;
+      background: var(--panel);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 22px;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .reset-btn:active { background: var(--panel-hi); color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Home screen -->
+    <section id="home" class="screen">
+      <header class="app-header">
+        <div class="app-title">Workout</div>
+        <div id="last-session" class="last-session hidden"></div>
+      </header>
+      <div class="tiles" id="tiles"></div>
+    </section>
+
+    <!-- Detail screen -->
+    <section id="detail" class="screen hidden">
+      <header class="detail-header">
+        <button class="back-btn" id="back-btn" aria-label="Back">‹</button>
+        <div class="detail-title" id="detail-title"></div>
+        <div class="progress" id="progress"></div>
+      </header>
+      <div id="exercises"></div>
+      <div class="reset-bar">
+        <button class="reset-btn" id="reset-btn">Reset today</button>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { WORKOUTS, WORKOUT_ORDER } from "./workouts.js";
+
+    // ---------- State & persistence ----------
+
+    const PREFIX = "workout:";
+
+    const todayKey = () => {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${PREFIX}${y}-${m}-${day}`;
+    };
+
+    const emptyState = (id) =>
+      WORKOUTS[id].exercises.map((ex) => Array(ex.sets).fill(false));
+
+    // Prune keys from earlier days, return { today: {...}, lastDay: 'YYYY-MM-DD'|null, lastId: string|null }
+    const loadAndPrune = () => {
+      const today = todayKey();
+      let lastDay = null;
+      let lastId = null;
+      let lastTime = 0;
+
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (!k || !k.startsWith(PREFIX)) continue;
+        if (k === today) continue;
+
+        // read before deleting, find most recent with any checks
+        try {
+          const v = JSON.parse(localStorage.getItem(k) || "{}");
+          for (const id of WORKOUT_ORDER) {
+            if (v[id] && v[id].some((arr) => arr.some(Boolean))) {
+              const dayStr = k.slice(PREFIX.length);
+              const t = new Date(dayStr + "T00:00:00").getTime();
+              if (t > lastTime) {
+                lastTime = t;
+                lastDay = dayStr;
+                lastId = id;
+              }
+            }
+          }
+        } catch {}
+        localStorage.removeItem(k);
+      }
+
+      let todayState = {};
+      try {
+        todayState = JSON.parse(localStorage.getItem(today) || "{}");
+      } catch {
+        todayState = {};
+      }
+      return { todayState, lastDay, lastId };
+    };
+
+    const saveToday = (state) => {
+      localStorage.setItem(todayKey(), JSON.stringify(state));
+    };
+
+    let { todayState, lastDay, lastId } = loadAndPrune();
+
+    const getWorkoutState = (id) => {
+      if (!todayState[id]) todayState[id] = emptyState(id);
+      // if data shape doesn't match (workout was edited), reset it
+      const expected = WORKOUTS[id].exercises;
+      if (
+        todayState[id].length !== expected.length ||
+        todayState[id].some((arr, i) => arr.length !== expected[i].sets)
+      ) {
+        todayState[id] = emptyState(id);
+      }
+      return todayState[id];
+    };
+
+    // ---------- Rendering ----------
+
+    const $ = (sel) => document.querySelector(sel);
+    const home = $("#home");
+    const detail = $("#detail");
+    const tilesEl = $("#tiles");
+    const detailTitle = $("#detail-title");
+    const progressEl = $("#progress");
+    const exercisesEl = $("#exercises");
+    const backBtn = $("#back-btn");
+    const resetBtn = $("#reset-btn");
+    const lastSessionEl = $("#last-session");
+
+    const renderHome = () => {
+      tilesEl.innerHTML = "";
+      for (const id of WORKOUT_ORDER) {
+        const w = WORKOUTS[id];
+        const btn = document.createElement("button");
+        btn.className = "tile";
+        btn.innerHTML = `
+          <div class="tile-name">${w.title}</div>
+          <div class="tile-meta">${w.exercises.length} exercises</div>
+        `;
+        btn.addEventListener("click", () => openWorkout(id, true));
+        tilesEl.appendChild(btn);
+      }
+
+      if (lastDay && lastId) {
+        lastSessionEl.textContent = `Last: ${WORKOUTS[lastId].title} · ${humanAgo(lastDay)}`;
+        lastSessionEl.classList.remove("hidden");
+      } else {
+        lastSessionEl.classList.add("hidden");
+      }
+    };
+
+    const humanAgo = (dayStr) => {
+      const then = new Date(dayStr + "T00:00:00");
+      const now = new Date();
+      const days = Math.floor((now - then) / 86400000);
+      if (days <= 0) return "today";
+      if (days === 1) return "yesterday";
+      if (days < 7) return `${days}d ago`;
+      const weeks = Math.floor(days / 7);
+      if (weeks === 1) return "1wk ago";
+      return `${weeks}wk ago`;
+    };
+
+    let currentId = null;
+
+    const openWorkout = (id, pushHistory) => {
+      currentId = id;
+      const w = WORKOUTS[id];
+      detailTitle.textContent = w.title;
+
+      exercisesEl.innerHTML = "";
+      const state = getWorkoutState(id);
+
+      w.exercises.forEach((ex, exIdx) => {
+        const exEl = document.createElement("div");
+        exEl.className = "exercise";
+        exEl.innerHTML = `
+          <div class="ex-name"></div>
+          <div class="ex-prescription"></div>
+          <div class="sets"></div>
+        `;
+        exEl.querySelector(".ex-name").textContent = ex.name;
+        exEl.querySelector(".ex-prescription").textContent = `${ex.sets} × ${ex.reps}`;
+        const setsEl = exEl.querySelector(".sets");
+
+        for (let s = 0; s < ex.sets; s++) {
+          const setBtn = document.createElement("button");
+          setBtn.className = "set" + (state[exIdx][s] ? " done" : "");
+          setBtn.textContent = String(s + 1);
+          setBtn.setAttribute("aria-label", `Set ${s + 1}`);
+          setBtn.addEventListener("click", () => {
+            state[exIdx][s] = !state[exIdx][s];
+            setBtn.classList.toggle("done", state[exIdx][s]);
+            saveToday(todayState);
+            updateProgress(id);
+          });
+          setsEl.appendChild(setBtn);
+        }
+
+        exercisesEl.appendChild(exEl);
+      });
+
+      updateProgress(id);
+
+      home.classList.add("hidden");
+      detail.classList.remove("hidden");
+      window.scrollTo(0, 0);
+
+      if (pushHistory) {
+        history.pushState({ screen: "detail", id }, "", `#${id}`);
+      }
+    };
+
+    const goHome = (pushHistory) => {
+      currentId = null;
+      detail.classList.add("hidden");
+      home.classList.remove("hidden");
+      // refresh last-session indicator in case user just checked things
+      renderHome();
+      if (pushHistory) {
+        history.pushState({ screen: "home" }, "", "#");
+      }
+    };
+
+    const updateProgress = (id) => {
+      const state = getWorkoutState(id);
+      const total = state.reduce((a, b) => a + b.length, 0);
+      const done = state.reduce((a, b) => a + b.filter(Boolean).length, 0);
+      progressEl.textContent = `${done} / ${total}`;
+      progressEl.classList.toggle("complete", done === total && total > 0);
+    };
+
+    // ---------- Wiring ----------
+
+    backBtn.addEventListener("click", () => {
+      // Prefer native back so hardware/gesture back also works; fall back for first entry
+      if (history.state && history.state.screen === "detail") {
+        history.back();
+      } else {
+        goHome(true);
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      if (!currentId) return;
+      if (!confirm(`Reset all checked sets for ${WORKOUTS[currentId].title}?`)) return;
+      todayState[currentId] = emptyState(currentId);
+      saveToday(todayState);
+      openWorkout(currentId, false);
+    });
+
+    window.addEventListener("popstate", (e) => {
+      const st = e.state;
+      if (st && st.screen === "detail" && WORKOUTS[st.id]) {
+        openWorkout(st.id, false);
+      } else {
+        goHome(false);
+      }
+    });
+
+    // ---------- Boot ----------
+
+    const bootId = location.hash.replace(/^#/, "");
+    renderHome();
+    if (WORKOUTS[bootId]) {
+      openWorkout(bootId, false);
+      history.replaceState({ screen: "detail", id: bootId }, "", `#${bootId}`);
+    } else {
+      history.replaceState({ screen: "home" }, "", location.pathname);
+    }
+
+    // ---------- PWA ----------
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
