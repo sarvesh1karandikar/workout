@@ -1,0 +1,72 @@
+@import "@fontsource/anton/400.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/800.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply min-h-screen;
+    min-height: 100dvh;
+  }
+
+  body {
+    @apply bg-bg text-white;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+      env(safe-area-inset-bottom) env(safe-area-inset-left);
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :root {
+    color-scheme: dark;
+    --accent: #10b981;
+  }
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  .bg-frost {
+    background-color: rgba(10, 10, 10, 0.65);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+}
+
+/* Grain texture overlay via SVG data URL */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* Ambient background glow */
+.ambient-glow {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 120% 55% at 50% -5%,
+    color-mix(in oklab, var(--accent) 32%, transparent) 0%,
+    transparent 55%
+  );
+  transition: background 500ms ease;
+}
