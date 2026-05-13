@@ -1,9 +1,10 @@
 import { AnimatePresence } from "framer-motion";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HomeScreen } from "./screens/HomeScreen";
 import { DetailScreen } from "./screens/DetailScreen";
 import { CompletionScreen } from "./screens/CompletionScreen";
-import { WORKOUTS, type WorkoutId } from "./data/workouts";
+import { NowTrainingBar } from "./components/NowTrainingBar";
+import { WORKOUTS, WORKOUT_ORDER, type WorkoutId } from "./data/workouts";
 import { useWorkoutState } from "./state/useWorkoutState";
 import { useWakeLock } from "./state/useWakeLock";
 
@@ -19,13 +20,12 @@ const readScreenFromHash = (): Screen => {
 };
 
 export function App() {
-  const { getState, toggleSet, resetWorkout, lastDay, lastId } = useWorkoutState();
+  const { getState, toggleSet, resetWorkout, progress, lastDay, lastId } =
+    useWorkoutState();
   const [screen, setScreen] = useState<Screen>(() => readScreenFromHash());
 
-  // Per-session start timestamp, resets when a detail screen is opened fresh
   const sessionStartRef = useRef<number>(Date.now());
 
-  // Keep screen awake while on detail screen
   useWakeLock(screen.kind === "detail");
 
   // Theme the root CSS var from the active workout accent
@@ -37,18 +37,15 @@ export function App() {
     document.documentElement.style.setProperty("--accent", accent);
   }, [screen]);
 
-  // Hash sync: so mobile back gesture / browser back works
+  // Hash sync
   useEffect(() => {
-    const handler = () => {
-      const next = readScreenFromHash();
-      setScreen(next);
-    };
+    const handler = () => setScreen(readScreenFromHash());
     window.addEventListener("hashchange", handler);
     return () => window.removeEventListener("hashchange", handler);
   }, []);
 
-  const openWorkout = useCallback((id: WorkoutId) => {
-    sessionStartRef.current = Date.now();
+  const openWorkout = useCallback((id: WorkoutId, freshSession = true) => {
+    if (freshSession) sessionStartRef.current = Date.now();
     location.hash = id;
     setScreen({ kind: "detail", id });
   }, []);
@@ -70,6 +67,27 @@ export function App() {
     });
   }, [screen]);
 
+  const handleSwipeNavigate = useCallback(
+    (direction: 1 | -1) => {
+      if (screen.kind !== "detail") return;
+      const idx = WORKOUT_ORDER.indexOf(screen.id);
+      const nextIdx = (idx + direction + WORKOUT_ORDER.length) % WORKOUT_ORDER.length;
+      const nextId = WORKOUT_ORDER[nextIdx]!;
+      // Don't reset session timer when swiping — keep the elapsed clock running
+      openWorkout(nextId, false);
+    },
+    [screen, openWorkout]
+  );
+
+  // Find an in-progress workout (started today but not finished). Used for mini-bar.
+  const inProgress = useMemo(() => {
+    for (const id of WORKOUT_ORDER) {
+      const p = progress(id);
+      if (p.done > 0 && p.done < p.total) return { id, ...p };
+    }
+    return null;
+  }, [progress]);
+
   return (
     <>
       <div className="ambient-glow" />
@@ -79,7 +97,7 @@ export function App() {
         {screen.kind === "home" && (
           <HomeScreen
             key="home"
-            onOpen={openWorkout}
+            onOpen={(id) => openWorkout(id)}
             lastDay={lastDay}
             lastId={lastId}
           />
@@ -93,7 +111,21 @@ export function App() {
             onToggleSet={toggleSet}
             onReset={() => resetWorkout(screen.id)}
             onComplete={handleComplete}
+            onSwipeNavigate={handleSwipeNavigate}
             sessionStart={sessionStartRef.current}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Now-training bar — only on home, only if a workout is mid-flight */}
+      <AnimatePresence>
+        {screen.kind === "home" && inProgress && (
+          <NowTrainingBar
+            key="now-bar"
+            workout={WORKOUTS[inProgress.id]}
+            done={inProgress.done}
+            total={inProgress.total}
+            onResume={() => openWorkout(inProgress.id, false)}
           />
         )}
       </AnimatePresence>
