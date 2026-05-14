@@ -1,14 +1,9 @@
 import { useCallback, useSyncExternalStore } from "react";
 
-/**
- * Per-exercise user overrides for weight, reps, and sets.
- * Keyed by exercise name (durable across reorderings of workouts.ts).
- * Values are strings to support "10 each leg", "30 sec", etc.
- */
 export type ExerciseOverride = {
-  weight?: string; // e.g. "35" — user enters just the number, unit from settings
-  reps?: string; // override default reps
-  sets?: number; // override default sets
+  weight?: string;
+  reps?: string;
+  sets?: number;
 };
 
 const STORAGE_KEY = "workout:overrides";
@@ -24,21 +19,29 @@ const emit = () => listeners.forEach((l) => l());
 
 type OverrideMap = Record<string, ExerciseOverride>;
 
-const read = (): OverrideMap => {
+function readFromStorage(): OverrideMap {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}") as OverrideMap;
   } catch {
     return {};
   }
-};
+}
 
-const write = (map: OverrideMap) => {
+// Cached snapshot — only updated on write()
+let cached: OverrideMap = readFromStorage();
+
+function getSnapshot(): OverrideMap {
+  return cached;
+}
+
+function writeToStorage(map: OverrideMap) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+  cached = map;
   emit();
-};
+}
 
 export function useExerciseOverrides() {
-  const overrides = useSyncExternalStore(subscribe, read, () => ({}) as OverrideMap);
+  const overrides = useSyncExternalStore(subscribe, getSnapshot, () => cached);
 
   const getOverride = useCallback(
     (exerciseName: string): ExerciseOverride => overrides[exerciseName] ?? {},
@@ -47,10 +50,9 @@ export function useExerciseOverrides() {
 
   const setOverride = useCallback(
     (exerciseName: string, patch: Partial<ExerciseOverride>) => {
-      const map = read();
+      const map = { ...cached };
       const existing = map[exerciseName] ?? {};
-      const next = { ...existing, ...patch };
-      // Remove empty/undefined keys
+      const next: ExerciseOverride = { ...existing, ...patch };
       for (const k of Object.keys(next) as (keyof ExerciseOverride)[]) {
         if (next[k] === undefined || next[k] === "" || next[k] === null) {
           delete next[k];
@@ -61,7 +63,7 @@ export function useExerciseOverrides() {
       } else {
         map[exerciseName] = next;
       }
-      write(map);
+      writeToStorage(map);
     },
     []
   );

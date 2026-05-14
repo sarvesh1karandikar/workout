@@ -3,7 +3,7 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
 export type WeightUnit = "lb" | "kg";
 
 export type Settings = {
-  restTimerSec: number; // seconds between sets (0 = disabled)
+  restTimerSec: number;
   weightUnit: WeightUnit;
   soundEnabled: boolean;
 };
@@ -16,7 +16,6 @@ const DEFAULTS: Settings = {
   soundEnabled: false,
 };
 
-// Simple pub/sub so all consumers re-render on change
 let listeners: (() => void)[] = [];
 const subscribe = (cb: () => void) => {
   listeners.push(cb);
@@ -26,7 +25,10 @@ const subscribe = (cb: () => void) => {
 };
 const emit = () => listeners.forEach((l) => l());
 
-const read = (): Settings => {
+// Cached snapshot — only recomputed on emit()
+let cachedSettings: Settings = readFromStorage();
+
+function readFromStorage(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULTS;
@@ -34,18 +36,23 @@ const read = (): Settings => {
   } catch {
     return DEFAULTS;
   }
-};
+}
+
+function getSnapshot(): Settings {
+  return cachedSettings;
+}
 
 const write = (next: Settings) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  cachedSettings = next;
   emit();
 };
 
 export function useSettings() {
-  const settings = useSyncExternalStore(subscribe, read, () => DEFAULTS);
+  const settings = useSyncExternalStore(subscribe, getSnapshot, () => DEFAULTS);
 
   const update = useCallback((partial: Partial<Settings>) => {
-    write({ ...read(), ...partial });
+    write({ ...cachedSettings, ...partial });
   }, []);
 
   return useMemo(() => ({ settings, update }), [settings, update]);
