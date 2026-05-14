@@ -2,6 +2,8 @@ import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Exercise, MuscleId } from "../data/workouts";
 import { MUSCLE_LABELS } from "../data/workouts";
+import { useExerciseOverrides } from "../state/useExerciseOverrides";
+import { useSettings } from "../state/useSettings";
 
 type Props = {
   open: boolean;
@@ -25,24 +27,30 @@ const saveNotes = (notes: Record<string, string>) => {
   localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
 };
 
-/**
- * Bottom sheet showing exercise details. Drag-to-dismiss, tap-backdrop-to-dismiss.
- * Notes are keyed by exercise NAME (durable across reorderings of `workouts.ts`).
- */
 export function ExerciseSheet({ open, exercise, accent, onClose }: Props) {
   const dragControls = useDragControls();
   const [notes, setNotes] = useState<string>("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const debounceRef = useRef<number | null>(null);
+  const { getOverride, setOverride } = useExerciseOverrides();
+  const { settings } = useSettings();
 
-  // Load this exercise's note on open
+  // Local form state
+  const [weight, setWeight] = useState("");
+  const [reps, setReps] = useState("");
+  const [sets, setSets] = useState("");
+
+  // Load on open
   useEffect(() => {
     if (!exercise) return;
     const all = loadNotes();
     setNotes(all[exercise.name] ?? "");
-  }, [exercise]);
+    const ov = getOverride(exercise.name);
+    setWeight(ov.weight ?? "");
+    setReps(ov.reps ?? "");
+    setSets(ov.sets !== undefined ? String(ov.sets) : "");
+  }, [exercise, getOverride]);
 
-  // Debounced save on edit
   const updateNote = useCallback(
     (next: string) => {
       setNotes(next);
@@ -58,19 +66,30 @@ export function ExerciseSheet({ open, exercise, accent, onClose }: Props) {
     [exercise]
   );
 
-  // Flush pending save when sheet closes
+  const saveOverrides = useCallback(() => {
+    if (!exercise) return;
+    setOverride(exercise.name, {
+      weight: weight.trim() || undefined,
+      reps: reps.trim() || undefined,
+      sets: sets.trim() ? parseInt(sets, 10) || undefined : undefined,
+    });
+  }, [exercise, weight, reps, sets, setOverride]);
+
+  // Flush on close
   useEffect(() => {
-    if (!open && debounceRef.current) {
-      window.clearTimeout(debounceRef.current);
-      debounceRef.current = null;
+    if (!open) {
+      if (debounceRef.current) {
+        window.clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+      saveOverrides();
     }
-  }, [open]);
+  }, [open, saveOverrides]);
 
   return (
     <AnimatePresence>
       {open && exercise && (
         <>
-          {/* Backdrop */}
           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}
@@ -81,7 +100,6 @@ export function ExerciseSheet({ open, exercise, accent, onClose }: Props) {
             className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm"
           />
 
-          {/* Sheet */}
           <motion.div
             key="sheet"
             role="dialog"
@@ -105,7 +123,6 @@ export function ExerciseSheet({ open, exercise, accent, onClose }: Props) {
               boxShadow: `0 -20px 60px -10px color-mix(in oklab, ${accent} 25%, transparent)`,
             }}
           >
-            {/* Drag handle bar — only this triggers drag */}
             <div
               onPointerDown={(e) => dragControls.start(e)}
               className="pt-3 pb-1 grid place-items-center cursor-grab active:cursor-grabbing"
@@ -132,8 +149,43 @@ export function ExerciseSheet({ open, exercise, accent, onClose }: Props) {
                 <div className="mt-1 font-display text-3xl uppercase tracking-wider leading-none">
                   {exercise.name}
                 </div>
-                <div className="mt-3 text-[13px] uppercase tracking-[0.18em] text-muted font-semibold tabular-nums">
-                  {exercise.sets} × {exercise.reps}
+                <div className="mt-3 text-[12px] uppercase tracking-[0.16em] text-muted font-semibold tabular-nums">
+                  Default: {exercise.sets} × {exercise.reps}
+                </div>
+              </div>
+
+              {/* Overrides */}
+              <div className="mt-6">
+                <div className="text-[10px] uppercase tracking-[0.22em] text-muted font-bold mb-3">
+                  Custom settings{" "}
+                  <span className="text-[9px] normal-case tracking-normal opacity-60">
+                    (leave blank to use defaults)
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <FieldInput
+                    label="Sets"
+                    value={sets}
+                    onChange={setSets}
+                    placeholder={String(exercise.sets)}
+                    accent={accent}
+                    inputMode="numeric"
+                  />
+                  <FieldInput
+                    label="Reps"
+                    value={reps}
+                    onChange={setReps}
+                    placeholder={exercise.reps}
+                    accent={accent}
+                  />
+                  <FieldInput
+                    label={`Weight (${settings.weightUnit})`}
+                    value={weight}
+                    onChange={setWeight}
+                    placeholder="—"
+                    accent={accent}
+                    inputMode="decimal"
+                  />
                 </div>
               </div>
 
@@ -160,7 +212,7 @@ export function ExerciseSheet({ open, exercise, accent, onClose }: Props) {
               </div>
 
               {/* Notes */}
-              <div className="mt-7">
+              <div className="mt-6">
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-[10px] uppercase tracking-[0.22em] text-muted font-bold">
                     Cues / notes
@@ -180,32 +232,61 @@ export function ExerciseSheet({ open, exercise, accent, onClose }: Props) {
                   value={notes}
                   onChange={(e) => updateNote(e.target.value)}
                   placeholder="e.g. keep elbows tucked, 45° bench, slow eccentric…"
-                  rows={4}
+                  rows={3}
                   className="w-full resize-none rounded-xl bg-panel border border-border px-4 py-3 text-[15px] leading-relaxed placeholder:text-muted outline-none focus:border-[color:var(--accent)] transition-colors"
                   style={{ caretColor: accent }}
                 />
-                <div className="mt-1.5 text-[10px] text-muted uppercase tracking-[0.18em] font-semibold">
-                  {notes.trim() ? "Saved automatically" : "Persists per exercise"}
-                </div>
               </div>
 
-              {/* Close button */}
               <button
                 type="button"
                 onClick={onClose}
-                className="mt-7 w-full rounded-full py-3.5 text-sm font-bold uppercase tracking-[0.18em] active:scale-[0.99] transition-transform"
+                className="mt-6 w-full rounded-full py-3.5 text-sm font-bold uppercase tracking-[0.18em] active:scale-[0.99] transition-transform"
                 style={{
                   background: accent,
                   color: "#04201a",
                   boxShadow: `0 0 24px -6px color-mix(in oklab, ${accent} 60%, transparent)`,
                 }}
               >
-                Got it
+                Save & Close
               </button>
             </div>
           </motion.div>
         </>
       )}
     </AnimatePresence>
+  );
+}
+
+function FieldInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  accent,
+  inputMode,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  accent: string;
+  inputMode?: "numeric" | "decimal" | "text";
+}) {
+  return (
+    <div>
+      <div className="text-[9px] uppercase tracking-[0.18em] text-muted font-bold mb-1.5">
+        {label}
+      </div>
+      <input
+        type="text"
+        inputMode={inputMode ?? "text"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-lg bg-panel border border-border px-3 py-2.5 text-center text-[15px] font-bold tabular-nums placeholder:text-muted/40 outline-none focus:border-[color:var(--accent)] transition-colors"
+        style={{ caretColor: accent }}
+      />
+    </div>
   );
 }

@@ -1,9 +1,12 @@
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MUSCLE_LABELS, type Workout, type WorkoutId } from "../data/workouts";
 import { ProgressRing } from "../components/ProgressRing";
 import { SetCircle } from "../components/SetCircle";
 import { ExerciseSheet } from "../components/ExerciseSheet";
+import { RestTimer } from "../components/RestTimer";
+import { useSettings } from "../state/useSettings";
+import { useExerciseOverrides } from "../state/useExerciseOverrides";
 
 type Props = {
   workout: Workout;
@@ -29,10 +32,19 @@ export function DetailScreen({
   onSwipeNavigate,
   sessionStart,
 }: Props) {
+  const { settings } = useSettings();
+  const { getOverride } = useExerciseOverrides();
   const accent = workout.accent;
   const total = state.reduce((a, b) => a + b.length, 0);
   const done = state.reduce((a, b) => a + b.filter(Boolean).length, 0);
   const complete = total > 0 && done === total;
+
+  // Rest timer
+  const [timerActive, setTimerActive] = useState(false);
+  const startTimer = useCallback(() => {
+    if (settings.restTimerSec > 0) setTimerActive(true);
+  }, [settings.restTimerSec]);
+  const dismissTimer = useCallback(() => setTimerActive(false), []);
 
   const [elapsed, setElapsed] = useState(Date.now() - sessionStart);
   useEffect(() => {
@@ -195,7 +207,11 @@ export function DetailScreen({
         >
           {workout.exercises.map((ex, exIdx) => {
             const exState = state[exIdx] ?? [];
-            const exDone = exState.filter(Boolean).length === ex.sets;
+            const ov = getOverride(ex.name);
+            const displaySets = ov.sets ?? ex.sets;
+            const displayReps = ov.reps ?? ex.reps;
+            const displayWeight = ov.weight;
+            const exDone = exState.filter(Boolean).length === displaySets;
             return (
               <motion.div
                 key={exIdx}
@@ -262,15 +278,24 @@ export function DetailScreen({
                     </AnimatePresence>
                   </button>
                   <div className="text-[11px] uppercase tracking-[0.15em] text-muted font-semibold tabular-nums mb-3">
-                    {ex.sets} × {ex.reps}
+                    {displaySets} × {displayReps}
+                    {displayWeight && (
+                      <span className="ml-2 text-[color:var(--accent)] opacity-75">
+                        @ {displayWeight} {settings.weightUnit}
+                      </span>
+                    )}
                   </div>
                   <div className="flex gap-3 flex-wrap">
-                    {Array.from({ length: ex.sets }).map((_, s) => (
+                    {Array.from({ length: displaySets }).map((_, s) => (
                       <SetCircle
                         key={s}
                         index={s}
                         done={exState[s] ?? false}
-                        onToggle={() => onToggleSet(workout.id, exIdx, s)}
+                        onToggle={() => {
+                          const wasChecked = exState[s] ?? false;
+                          onToggleSet(workout.id, exIdx, s);
+                          if (!wasChecked) startTimer();
+                        }}
                       />
                     ))}
                   </div>
@@ -304,6 +329,14 @@ export function DetailScreen({
         exercise={sheetExercise}
         accent={accent}
         onClose={() => setSheetIdx(null)}
+      />
+
+      <RestTimer
+        durationSec={settings.restTimerSec}
+        active={timerActive}
+        onDone={dismissTimer}
+        accent={accent}
+        soundEnabled={settings.soundEnabled}
       />
     </>
   );

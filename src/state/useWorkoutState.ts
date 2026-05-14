@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { WORKOUTS, WORKOUT_ORDER, type WorkoutId } from "../data/workouts";
+import { emitHistoryChange } from "./useHistory";
 
 const PREFIX = "workout:";
 
@@ -38,9 +39,8 @@ const pruneAndFindLast = (): { lastDay: string | null; lastId: WorkoutId | null 
         }
       }
     } catch {
-      // bad entry, drop it
+      // bad entry, skip it
     }
-    localStorage.removeItem(k);
   }
 
   return { lastDay, lastId };
@@ -57,9 +57,10 @@ export function useWorkoutState() {
 
   const [{ lastDay, lastId }, setLast] = useState(() => pruneAndFindLast());
 
-  // Persist on every change
+  // Persist on every change + notify history listeners
   useEffect(() => {
     localStorage.setItem(todayKey(), JSON.stringify(today));
+    emitHistoryChange();
   }, [today]);
 
   const getState = useCallback(

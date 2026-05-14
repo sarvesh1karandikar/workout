@@ -4,6 +4,7 @@ import { HomeScreen } from "./screens/HomeScreen";
 import { DetailScreen } from "./screens/DetailScreen";
 import { CompletionScreen } from "./screens/CompletionScreen";
 import { NowTrainingBar } from "./components/NowTrainingBar";
+import { SettingsDrawer } from "./components/SettingsDrawer";
 import { WORKOUTS, WORKOUT_ORDER, type WorkoutId } from "./data/workouts";
 import { useWorkoutState } from "./state/useWorkoutState";
 import { useWakeLock } from "./state/useWakeLock";
@@ -23,6 +24,7 @@ export function App() {
   const { getState, toggleSet, resetWorkout, progress, lastDay, lastId } =
     useWorkoutState();
   const [screen, setScreen] = useState<Screen>(() => readScreenFromHash());
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const sessionStartRef = useRef<number>(Date.now());
 
@@ -98,6 +100,7 @@ export function App() {
           <HomeScreen
             key="home"
             onOpen={(id) => openWorkout(id)}
+            onOpenSettings={() => setSettingsOpen(true)}
             lastDay={lastDay}
             lastId={lastId}
           />
@@ -141,6 +144,11 @@ export function App() {
           />
         )}
       </AnimatePresence>
+
+      <SettingsDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </>
   );
 }
