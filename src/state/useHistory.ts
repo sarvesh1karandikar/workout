@@ -1,26 +1,20 @@
-import { useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const PREFIX = "workout:";
-const SETTINGS_KEY = "workout:settings";
-const NOTES_KEY = "workout:notes";
-const OVERRIDES_KEY = "workout:overrides";
-const SKIP_KEYS = new Set([SETTINGS_KEY, NOTES_KEY, OVERRIDES_KEY]);
+const SKIP_KEYS = new Set(["workout:settings", "workout:notes", "workout:overrides"]);
 
 type DaySummary = {
-  date: string; // YYYY-MM-DD
+  date: string;
   setsCompleted: number;
 };
 
-let listeners: (() => void)[] = [];
-const subscribe = (cb: () => void) => {
-  listeners.push(cb);
-  return () => {
-    listeners = listeners.filter((l) => l !== cb);
-  };
+export type HeatmapDay = {
+  date: string;
+  sets: number;
+  level: 0 | 1 | 2 | 3 | 4;
 };
-export const emitHistoryChange = () => listeners.forEach((l) => l());
 
-const readHistory = (): DaySummary[] => {
+function readHistory(): DaySummary[] {
   const result: DaySummary[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
@@ -37,64 +31,14 @@ const readHistory = (): DaySummary[] => {
       }
       if (sets > 0) result.push({ date, setsCompleted: sets });
     } catch {
-      // ignore corrupt entries
+      // ignore
     }
   }
   return result.sort((a, b) => a.date.localeCompare(b.date));
-};
-
-export function useHistory() {
-  const history = useSyncExternalStore(subscribe, readHistory, () => []);
-
-  const { streak, heatmap } = useMemo(() => {
-    // Build a set of dates that had at least one set
-    const activeDates = new Set(history.map((d) => d.date));
-
-    // Current streak: count consecutive days ending today (or yesterday)
-    let streak = 0;
-    const now = new Date();
-    const check = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    // Check today first — if active, include it
-    const todayStr = fmtDate(check);
-    if (!activeDates.has(todayStr)) {
-      // Maybe yesterday was last day
-      check.setDate(check.getDate() - 1);
-      if (!activeDates.has(fmtDate(check))) {
-        // No streak
-        return { streak: 0, heatmap: buildHeatmap(history) };
-      }
-    }
-    // Count backwards
-    while (activeDates.has(fmtDate(check))) {
-      streak++;
-      check.setDate(check.getDate() - 1);
-    }
-
-    return { streak, heatmap: buildHeatmap(history) };
-  }, [history]);
-
-  return { history, streak, heatmap };
 }
 
-type HeatmapDay = {
-  date: string;
-  sets: number; // 0 = no data
-  level: 0 | 1 | 2 | 3 | 4;
-};
-
-function buildHeatmap(history: DaySummary[]): HeatmapDay[] {
-  const map = new Map(history.map((d) => [d.date, d.setsCompleted]));
-  const days: HeatmapDay[] = [];
-  const now = new Date();
-  // Go back 12 weeks (84 days)
-  for (let i = 83; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const date = fmtDate(d);
-    const sets = map.get(date) ?? 0;
-    days.push({ date, sets, level: intensityLevel(sets) });
-  }
-  return days;
+function fmtDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function intensityLevel(sets: number): 0 | 1 | 2 | 3 | 4 {
@@ -105,6 +49,68 @@ function intensityLevel(sets: number): 0 | 1 | 2 | 3 | 4 {
   return 4;
 }
 
-function fmtDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function buildHeatmap(history: DaySummary[]): HeatmapDay[] {
+  const map = new Map(history.map((d) => [d.date, d.setsCompleted]));
+  const days: HeatmapDay[] = [];
+  const now = new Date();
+  for (let i = 83; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const date = fmtDate(d);
+    const sets = map.get(date) ?? 0;
+    days.push({ date, sets, level: intensityLevel(sets) });
+  }
+  return days;
 }
+
+function computeStreak(activeDates: Set<string>): number {
+  let streak = 0;
+  const check = new Date();
+  check.setHours(0, 0, 0, 0);
+  const todayStr = fmtDate(check);
+  if (!activeDates.has(todayStr)) {
+    check.setDate(check.getDate() - 1);
+    if (!activeDates.has(fmtDate(check))) return 0;
+  }
+  while (activeDates.has(fmtDate(check))) {
+    streak++;
+    check.setDate(check.getDate() - 1);
+  }
+  return streak;
+}
+
+/**
+ * Reads workout history from localStorage once on mount.
+ * Call `refresh()` after completing sets to update the heatmap.
+ */
+export function useHistory() {
+  const [history, setHistory] = useState<DaySummary[]>(() => readHistory());
+
+  // Refresh on window focus (covers coming back from detail -> home)
+  useEffect(() => {
+    const handler = () => setHistory(readHistory());
+    window.addEventListener("focus", handler);
+    // Also refresh on storage event (other tabs) and on visibility change
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") handler();
+    });
+    return () => {
+      window.removeEventListener("focus", handler);
+    };
+  }, []);
+
+  const { streak, heatmap } = useMemo(() => {
+    const activeDates = new Set(history.map((d) => d.date));
+    return {
+      streak: computeStreak(activeDates),
+      heatmap: buildHeatmap(history),
+    };
+  }, [history]);
+
+  const refresh = () => setHistory(readHistory());
+
+  return { history, streak, heatmap, refresh };
+}
+
+// Keep the export for any consumers but make it a no-op now
+export const emitHistoryChange = () => {};
