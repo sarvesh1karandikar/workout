@@ -8,11 +8,12 @@ import { humanAgo } from "../state/useWorkoutState";
 type Props = {
   onOpen: (id: WorkoutId) => void;
   onOpenSettings: () => void;
+  onOpenRecipes: () => void;
   lastDay: string | null;
   lastId: WorkoutId | null;
 };
 
-export function HomeScreen({ onOpen, onOpenSettings, lastDay, lastId }: Props) {
+export function HomeScreen({ onOpen, onOpenSettings, onOpenRecipes, lastDay, lastId }: Props) {
   return (
     <motion.section
       initial={{ opacity: 0 }}
@@ -74,7 +75,25 @@ export function HomeScreen({ onOpen, onOpenSettings, lastDay, lastId }: Props) {
         ))}
       </motion.div>
 
-      <footer className="mt-10 text-center text-[10px] text-muted uppercase tracking-[0.2em]">
+      {/* Recipes nav */}
+      <button
+        type="button"
+        onClick={onOpenRecipes}
+        className="mt-8 w-full flex items-center justify-between px-5 py-4 rounded-2xl border border-border bg-panel active:bg-panel-hi transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-lg">🍲</span>
+          <div>
+            <div className="text-sm font-bold uppercase tracking-wider">Recipes</div>
+            <div className="text-[10px] text-muted uppercase tracking-[0.14em] font-semibold mt-0.5">
+              Meal prep & nutrition
+            </div>
+          </div>
+        </div>
+        <span className="text-muted text-lg">›</span>
+      </button>
+
+      <footer className="mt-6 text-center text-[10px] text-muted uppercase tracking-[0.2em]">
         Tap a workout to begin
       </footer>
     </motion.section>

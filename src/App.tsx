@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HomeScreen } from "./screens/HomeScreen";
 import { DetailScreen } from "./screens/DetailScreen";
 import { CompletionScreen } from "./screens/CompletionScreen";
+import { RecipesScreen } from "./screens/RecipesScreen";
 import { NowTrainingBar } from "./components/NowTrainingBar";
 import { SettingsDrawer } from "./components/SettingsDrawer";
 import { WORKOUTS, WORKOUT_ORDER, type WorkoutId } from "./data/workouts";
@@ -12,11 +13,13 @@ import { useWakeLock } from "./state/useWakeLock";
 type Screen =
   | { kind: "home" }
   | { kind: "detail"; id: WorkoutId }
-  | { kind: "complete"; id: WorkoutId; sets: number; elapsedMs: number };
+  | { kind: "complete"; id: WorkoutId; sets: number; elapsedMs: number }
+  | { kind: "recipes" };
 
 const readScreenFromHash = (): Screen => {
-  const h = location.hash.replace(/^#/, "") as WorkoutId | "";
-  if (h && h in WORKOUTS) return { kind: "detail", id: h };
+  const h = location.hash.replace(/^#/, "");
+  if (h === "recipes") return { kind: "recipes" };
+  if (h && h in WORKOUTS) return { kind: "detail", id: h as WorkoutId };
   return { kind: "home" };
 };
 
@@ -101,6 +104,10 @@ export function App() {
             key="home"
             onOpen={(id) => openWorkout(id)}
             onOpenSettings={() => setSettingsOpen(true)}
+            onOpenRecipes={() => {
+              location.hash = "recipes";
+              setScreen({ kind: "recipes" });
+            }}
             lastDay={lastDay}
             lastId={lastId}
           />
@@ -117,6 +124,9 @@ export function App() {
             onSwipeNavigate={handleSwipeNavigate}
             sessionStart={sessionStartRef.current}
           />
+        )}
+        {screen.kind === "recipes" && (
+          <RecipesScreen key="recipes" onBack={goHome} />
         )}
       </AnimatePresence>
 
