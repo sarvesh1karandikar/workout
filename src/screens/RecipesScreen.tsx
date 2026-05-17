@@ -130,6 +130,27 @@ function FilterPill({ label, active, onClick }: { label: string; active: boolean
   );
 }
 
+// Per-recipe visual metadata
+const RECIPE_VISUALS: Record<string, { emoji: string; gradient: [string, string] }> = {
+  "chicken-mushroom-pea-soup": { emoji: "🍲", gradient: ["#92400e", "#451a03"] },
+  "garlic-bread":              { emoji: "🥖", gradient: ["#a16207", "#422006"] },
+  "cabbage-potato-egg-pancake":{ emoji: "🥞", gradient: ["#65a30d", "#1a2e05"] },
+  "overnight-oats-strawberry": { emoji: "🍓", gradient: ["#dc2626", "#450a0a"] },
+  "overnight-oats-banana-pb":  { emoji: "🍌", gradient: ["#ca8a04", "#422006"] },
+  "egg-fried-rice":            { emoji: "🍚", gradient: ["#ea580c", "#431407"] },
+  "fish-rawa-fry":             { emoji: "🐟", gradient: ["#0891b2", "#083344"] },
+  "grilled-brussels-sprouts":  { emoji: "🥦", gradient: ["#16a34a", "#052e16"] },
+  "chicken-curry-pan":         { emoji: "🍛", gradient: ["#dc2626", "#450a0a"] },
+  "chicken-curry-cooker":      { emoji: "🍛", gradient: ["#b91c1c", "#3b0764"] },
+  "egg-bhurji":                { emoji: "🍳", gradient: ["#d97706", "#451a03"] },
+  "paneer-bhurji":             { emoji: "🧀", gradient: ["#eab308", "#422006"] },
+  "matki-usal-cooker":         { emoji: "🫘", gradient: ["#059669", "#022c22"] },
+  "poha":                      { emoji: "🌾", gradient: ["#ca8a04", "#1c1917"] },
+  "upma":                      { emoji: "🥣", gradient: ["#a16207", "#292524"] },
+};
+
+const DEFAULT_VISUAL = { emoji: "🍽️", gradient: ["#78350f", "#1c1917"] as [string, string] };
+
 function RecipeCard({
   recipe,
   expanded,
@@ -140,6 +161,7 @@ function RecipeCard({
   onToggle: () => void;
 }) {
   const accent = "#f59e0b";
+  const visual = RECIPE_VISUALS[recipe.id] ?? DEFAULT_VISUAL;
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
 
   const toggleIngredient = useCallback((idx: number) => {
@@ -151,7 +173,6 @@ function RecipeCard({
     });
   }, []);
 
-  // Persist checked state per recipe in a ref (resets when collapsed)
   const wasExpanded = useRef(false);
   if (!expanded && wasExpanded.current) {
     wasExpanded.current = false;
@@ -167,44 +188,68 @@ function RecipeCard({
         borderColor: expanded
           ? `color-mix(in oklab, ${accent} 40%, #222)`
           : "#222",
-        background: expanded
-          ? `linear-gradient(135deg, color-mix(in oklab, ${accent} 12%, #141414) 0%, #141414 70%)`
-          : "#141414",
+        background: "#141414",
       }}
     >
-      {/* Header */}
+      {/* Gradient hero banner */}
       <button
         type="button"
         onClick={onToggle}
-        className="w-full text-left px-5 py-4 flex items-center gap-4 active:opacity-80 transition-opacity"
+        className="relative w-full text-left overflow-hidden active:opacity-90 transition-opacity"
       >
-        <div className="flex-1 min-w-0">
-          <div className="font-display text-xl uppercase tracking-wider leading-tight">
-            {recipe.title}
+        {/* Gradient background */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(135deg, ${visual.gradient[0]} 0%, ${visual.gradient[1]} 100%)`,
+          }}
+        />
+        {/* Radial glow */}
+        <div
+          className="absolute -right-8 -top-8 w-40 h-40 rounded-full opacity-40"
+          style={{
+            background: `radial-gradient(circle, ${visual.gradient[0]} 0%, transparent 70%)`,
+          }}
+        />
+        {/* Large emoji */}
+        <span
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-6xl opacity-30 select-none pointer-events-none"
+          style={{ filter: "grayscale(20%)" }}
+        >
+          {visual.emoji}
+        </span>
+
+        <div className="relative px-5 py-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl mt-0.5 flex-shrink-0">{visual.emoji}</span>
+            <div className="flex-1 min-w-0">
+              <div className="font-display text-xl uppercase tracking-wider leading-tight text-white">
+                {recipe.title}
+              </div>
+              <div className="mt-1 text-[11px] text-white/60 uppercase tracking-[0.14em] font-semibold">
+                {recipe.prepTime} prep · {recipe.cookTime} cook
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+              {recipe.protein && (
+                <span className="text-[11px] font-bold tabular-nums text-white">
+                  {recipe.protein}g
+                </span>
+              )}
+              {recipe.calories && (
+                <span className="text-[10px] tabular-nums text-white/50">
+                  {recipe.calories} cal
+                </span>
+              )}
+              <motion.span
+                animate={{ rotate: expanded ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+                className="text-base mt-0.5 text-white/70"
+              >
+                ⌄
+              </motion.span>
+            </div>
           </div>
-          <div className="mt-1 text-[11px] text-muted uppercase tracking-[0.14em] font-semibold">
-            {recipe.prepTime} prep · {recipe.cookTime} cook · {recipe.servings} servings
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-0.5">
-          {recipe.protein && (
-            <span className="text-[11px] font-bold tabular-nums" style={{ color: accent }}>
-              {recipe.protein}g protein
-            </span>
-          )}
-          {recipe.calories && (
-            <span className="text-[10px] tabular-nums text-muted">
-              {recipe.calories} cal
-            </span>
-          )}
-          <motion.span
-            animate={{ rotate: expanded ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-            className="text-lg mt-0.5"
-            style={{ color: accent }}
-          >
-            ⌄
-          </motion.span>
         </div>
       </button>
 
