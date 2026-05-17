@@ -8,8 +8,20 @@ export type Step = {
   time?: string; // e.g. "5 min"
 };
 
+export type RecipeCategory = "breakfast" | "mains" | "soups" | "sides";
+
+export const CATEGORY_LABELS: Record<RecipeCategory, string> = {
+  breakfast: "Breakfast",
+  mains: "Mains",
+  soups: "Soups",
+  sides: "Sides",
+};
+
+export const CATEGORY_ORDER: RecipeCategory[] = ["breakfast", "mains", "soups", "sides"];
+
 export type Recipe = {
   id: string;
+  category: RecipeCategory;
   title: string;
   subtitle: string;
   servings: number;
@@ -26,6 +38,7 @@ export type Recipe = {
 export const RECIPES: Recipe[] = [
   {
     id: "chicken-mushroom-pea-soup",
+    category: "soups",
     title: "Chicken Mushroom Pea Soup",
     subtitle: "Creamy, high-protein, one-pot comfort",
     servings: 4,
@@ -66,6 +79,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "garlic-bread",
+    category: "sides",
     title: "Garlic Bread",
     subtitle: "Crispy, buttery, goes with everything",
     servings: 4,
@@ -96,6 +110,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "cabbage-potato-egg-pancake",
+    category: "breakfast",
     title: "Cabbage Potato Egg Pancake",
     subtitle: "Crispy, savory, cheap & filling",
     servings: 2,
@@ -133,6 +148,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "overnight-oats-strawberry",
+    category: "breakfast",
     title: "Strawberry Overnight Oats",
     subtitle: "No-cook, grab-and-go breakfast",
     servings: 1,
@@ -165,6 +181,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "overnight-oats-banana-pb",
+    category: "breakfast",
     title: "Banana Peanut Butter Overnight Oats",
     subtitle: "Thick, creamy, tastes like dessert",
     servings: 1,
@@ -198,6 +215,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "egg-fried-rice",
+    category: "mains",
     title: "Egg Fried Rice",
     subtitle: "5-minute wok magic with day-old rice",
     servings: 2,
@@ -235,6 +253,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "fish-rawa-fry",
+    category: "mains",
     title: "Fish Rawa Fry",
     subtitle: "Crispy semolina-crusted pan-fried fish — Mangalorean style",
     servings: 2,
@@ -276,6 +295,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "grilled-brussels-sprouts",
+    category: "sides",
     title: "Grilled Brussels Sprouts",
     subtitle: "Charred, crispy, caramelised — converts haters",
     servings: 2,
@@ -310,6 +330,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "chicken-curry-pan",
+    category: "mains",
     title: "Chicken Curry (Pan)",
     subtitle: "Simple everyday Indian curry — stovetop method",
     servings: 4,
@@ -354,6 +375,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "chicken-curry-cooker",
+    category: "mains",
     title: "Chicken Curry (Pressure Cooker)",
     subtitle: "Same great curry, half the time — dump and cook",
     servings: 4,
@@ -400,6 +422,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "egg-bhurji",
+    category: "breakfast",
     title: "Egg Bhurji",
     subtitle: "Indian spiced scrambled eggs — 5 min, absurdly good",
     servings: 2,
@@ -438,6 +461,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "paneer-bhurji",
+    category: "breakfast",
     title: "Paneer Bhurji",
     subtitle: "Scrambled paneer — vegetarian protein bomb, 5 min",
     servings: 2,
@@ -481,6 +505,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "matki-usal-cooker",
+    category: "mains",
     title: "Matki Usal (Pressure Cooker)",
     subtitle: "Sprouted moth beans curry — Maharashtrian protein staple",
     servings: 4,
@@ -528,6 +553,98 @@ export const RECIPES: Recipe[] = [
       "Jaggery balances the spice — don't skip it, even a small amount makes a difference.",
       "This is the traditional Maharashtrian 'misal' base. Top with farsan (sev/chivda), chopped onion, and lemon for full misal pav.",
       "Meal-preps beautifully — keeps 4 days in fridge, freezes well.",
+    ],
+  },
+  {
+    id: "poha",
+    category: "breakfast",
+    title: "Poha",
+    subtitle: "Flattened rice — light, fast, Maharashtrian staple",
+    servings: 2,
+    prepTime: "5 min",
+    cookTime: "8 min",
+    calories: 280,
+    protein: 6,
+    tags: ["quick", "indian", "maharashtrian", "breakfast"],
+    ingredients: [
+      { item: "Thin poha (flattened rice)", amount: "2 cups" },
+      { item: "Onion (finely chopped)", amount: "1 medium" },
+      { item: "Potato (small, diced)", amount: "1" },
+      { item: "Green chillies (chopped)", amount: "2" },
+      { item: "Mustard seeds", amount: "½ tsp" },
+      { item: "Cumin seeds", amount: "½ tsp" },
+      { item: "Curry leaves", amount: "8-10" },
+      { item: "Turmeric", amount: "¼ tsp" },
+      { item: "Sugar", amount: "1 tsp" },
+      { item: "Salt", amount: "to taste" },
+      { item: "Lemon juice", amount: "1 tbsp" },
+      { item: "Oil", amount: "2 tbsp" },
+      { item: "Peanuts (roasted)", amount: "2 tbsp" },
+      { item: "Fresh coriander (chopped)", amount: "2 tbsp" },
+      { item: "Sev (for topping)", amount: "optional" },
+    ],
+    steps: [
+      { text: "Put poha in a colander, rinse gently under water for 30 seconds. Let it sit and absorb — it should be soft but not mushy. Add turmeric, salt, and sugar. Toss gently with your fingers.", time: "2 min" },
+      { text: "Heat oil in a pan over medium heat. Add mustard seeds — wait for them to pop. Add cumin seeds, curry leaves, and peanuts. Stir for 30 seconds.", time: "1 min" },
+      { text: "Add diced potato. Cover and cook until just tender (sprinkle a little water if needed).", time: "3-4 min" },
+      { text: "Add chopped onion and green chillies. Sauté until onion is translucent.", time: "2 min" },
+      { text: "Add the rinsed, seasoned poha. Gently fold everything together — don't mash it. Cook for 1-2 min to warm through.", time: "2 min" },
+      { text: "Squeeze lemon juice over the top. Garnish with coriander and sev. Serve hot." },
+    ],
+    notes: [
+      "Use THIN poha (not thick). Thick poha needs longer soaking and turns gluey if overworked.",
+      "Don't over-rinse — 30 seconds max. You want it hydrated, not waterlogged.",
+      "The sugar isn't for sweetness — it balances the tartness and salt. Classic Maharashtrian trick.",
+      "No potato? Skip it — still tastes great. Add it for more substance.",
+      "Kanda poha (just onion, no potato) is the quickest weekday version.",
+    ],
+  },
+  {
+    id: "upma",
+    category: "breakfast",
+    title: "Upma",
+    subtitle: "Savoury semolina porridge — South Indian comfort",
+    servings: 2,
+    prepTime: "5 min",
+    cookTime: "10 min",
+    calories: 300,
+    protein: 8,
+    tags: ["quick", "indian", "breakfast", "vegetarian"],
+    ingredients: [
+      { item: "Rava (semolina/sooji)", amount: "1 cup" },
+      { item: "Water", amount: "2½ cups" },
+      { item: "Onion (finely chopped)", amount: "1 medium" },
+      { item: "Green chillies (chopped)", amount: "2" },
+      { item: "Ginger (grated)", amount: "1 tsp" },
+      { item: "Mustard seeds", amount: "½ tsp" },
+      { item: "Urad dal (split black gram)", amount: "1 tsp" },
+      { item: "Chana dal (split chickpea)", amount: "1 tsp" },
+      { item: "Curry leaves", amount: "8-10" },
+      { item: "Cashews (broken)", amount: "8-10" },
+      { item: "Turmeric", amount: "¼ tsp" },
+      { item: "Salt", amount: "¾ tsp" },
+      { item: "Ghee or oil", amount: "2 tbsp" },
+      { item: "Lemon juice", amount: "1 tsp" },
+      { item: "Fresh coriander (chopped)", amount: "2 tbsp" },
+      { item: "Mixed veg: peas, carrots, beans (finely diced)", amount: "¼ cup (optional)" },
+    ],
+    steps: [
+      { text: "Dry-roast rava in a pan on medium-low heat, stirring constantly, until it smells nutty and turns very slightly golden. Transfer to a plate.", time: "3-4 min" },
+      { text: "In the same pan, heat ghee/oil over medium heat. Add mustard seeds — let them pop. Add urad dal, chana dal, and cashews. Fry until dals turn golden.", time: "1-2 min" },
+      { text: "Add curry leaves, green chillies, and ginger. Stir for 15 seconds." },
+      { text: "Add onion (and mixed veg if using). Sauté until onion is translucent.", time: "2-3 min" },
+      { text: "Add water, turmeric, and salt. Bring to a rolling boil." },
+      { text: "Reduce heat to LOW. Add roasted rava in a slow stream, stirring continuously with the other hand to prevent lumps. Keep stirring for 1-2 min until the mixture thickens and pulls away from the sides.", time: "2 min" },
+      { text: "Cover with a lid, cook on lowest heat for 2 more minutes. Switch off.", time: "2 min" },
+      { text: "Fluff with a fork. Add lemon juice, garnish with coriander. Serve hot with coconut chutney or pickle." },
+    ],
+    notes: [
+      "Dry-roasting rava is essential — it prevents mushiness and adds nutty flavour.",
+      "Pour rava into BOILING water (not cold). Cold water = instant lumps.",
+      "Stir continuously while adding rava — lumps form in the first 30 seconds or not at all.",
+      "The ratio is key: 1 cup rava : 2.5 cups water. More water = porridge. Less = dry.",
+      "Let it rest covered for 2 min after cooking — it firms up to the right texture.",
+      "Leftovers can be shaped into patties, shallow-fried, and served as upma cutlets.",
     ],
   },
 ];

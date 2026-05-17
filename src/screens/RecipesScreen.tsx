@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
-import { RECIPES, type Recipe } from "../data/recipes";
+import { useMemo, useState } from "react";
+import { RECIPES, CATEGORY_ORDER, CATEGORY_LABELS, type Recipe, type RecipeCategory } from "../data/recipes";
 
 type Props = {
   onBack: () => void;
@@ -8,6 +8,15 @@ type Props = {
 
 export function RecipesScreen({ onBack }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  const grouped = useMemo(() => {
+    const map = new Map<RecipeCategory, Recipe[]>();
+    for (const cat of CATEGORY_ORDER) map.set(cat, []);
+    for (const r of RECIPES) {
+      map.get(r.category)?.push(r);
+    }
+    return map;
+  }, []);
 
   return (
     <motion.section
@@ -31,28 +40,46 @@ export function RecipesScreen({ onBack }: Props) {
       </header>
 
       <motion.div
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-6"
         initial="hidden"
         animate="visible"
         variants={{
-          visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+          visible: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
         }}
       >
-        {RECIPES.map((recipe) => (
-          <motion.div
-            key={recipe.id}
-            variants={{
-              hidden: { opacity: 0, y: 14 },
-              visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
-            }}
-          >
-            <RecipeCard
-              recipe={recipe}
-              expanded={expanded === recipe.id}
-              onToggle={() => setExpanded(expanded === recipe.id ? null : recipe.id)}
-            />
-          </motion.div>
-        ))}
+        {CATEGORY_ORDER.map((cat) => {
+          const recipes = grouped.get(cat);
+          if (!recipes || recipes.length === 0) return null;
+          return (
+            <motion.div
+              key={cat}
+              variants={{
+                hidden: { opacity: 0, y: 14 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+              }}
+            >
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <span className="text-lg">{catEmoji(cat)}</span>
+                <div className="text-[11px] uppercase tracking-[0.22em] font-bold text-muted">
+                  {CATEGORY_LABELS[cat]}
+                </div>
+                <span className="text-[10px] tabular-nums text-muted/50 font-semibold">
+                  {recipes.length}
+                </span>
+              </div>
+              <div className="flex flex-col gap-3">
+                {recipes.map((recipe) => (
+                  <RecipeCard
+                    key={recipe.id}
+                    recipe={recipe}
+                    expanded={expanded === recipe.id}
+                    onToggle={() => setExpanded(expanded === recipe.id ? null : recipe.id)}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          );
+        })}
       </motion.div>
     </motion.section>
   );
@@ -201,4 +228,14 @@ function SectionHeader({ children, accent }: { children: React.ReactNode; accent
       {children}
     </div>
   );
+}
+
+function catEmoji(cat: string): string {
+  switch (cat) {
+    case "breakfast": return "🍳";
+    case "mains": return "🍛";
+    case "soups": return "🍲";
+    case "sides": return "🥗";
+    default: return "🍽️";
+  }
 }
