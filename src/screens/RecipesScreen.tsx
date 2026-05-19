@@ -147,6 +147,7 @@ const RECIPE_VISUALS: Record<string, { emoji: string; gradient: [string, string]
   "matki-usal-cooker":         { emoji: "🫘", gradient: ["#059669", "#022c22"] },
   "poha":                      { emoji: "🌾", gradient: ["#ca8a04", "#1c1917"] },
   "upma":                      { emoji: "🥣", gradient: ["#a16207", "#292524"] },
+  "grilled-cheese-omelette":   { emoji: "🧈", gradient: ["#ca8a04", "#78350f"] },
 };
 
 const DEFAULT_VISUAL = { emoji: "🍽️", gradient: ["#78350f", "#1c1917"] as [string, string] };
